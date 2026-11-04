@@ -184,18 +184,43 @@ public partial class MainForm : Form
     /// </summary>
     private string NameFor(Keys code, bool ctrl, bool alt, bool shift, char? resolved)
     {
+        // 1) Değiştirici tuşun kendisine basıldıysa yalnızca adını yaz.
         if (code is Keys.ControlKey or Keys.LControlKey or Keys.RControlKey) return "Ctrl";
         if (code is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey) return "Shift";
         if (code is Keys.Menu or Keys.LMenu or Keys.RMenu) return "Alt";
 
-        if (resolved is char rc && !ctrl && !alt)
-            return DisplayChar(rc);
+        // 2) Ctrl/Alt yoksa tek karakter göster.
+        if (!ctrl && !alt)
+        {
+            // Harfler: büyük/küçük durumunu o anki Shift + CapsLock'tan KESİN hesapla.
+            // (Önbelleğe güvenmeyiz; böylece ilk basışta doğru olur, titreme olmaz.)
+            if (code >= Keys.A && code <= Keys.Z)
+            {
+                bool upper = shift ^ Control.IsKeyLocked(Keys.CapsLock);
+                return ((char)((upper ? 'A' : 'a') + (code - Keys.A))).ToString();
+            }
+            // Türkçe/OEM/sembol/boşluk: KeyPress'ten öğrenilen gerçek karakter.
+            if (resolved is char rc)
+                return DisplayChar(rc);
+            // Henüz bilinmiyor (bu tuşun ilk basışı): dostane ad; KeyPress hemen düzeltir.
+            return FriendlyName(code);
+        }
 
+        // 3) Ctrl/Alt varsa "önek + tuş" biçimi.
         var parts = new List<string>();
         if (ctrl) parts.Add("Ctrl");
         if (alt) parts.Add("Alt");
         if (shift) parts.Add("Shift");
-        parts.Add(FriendlyName(code));
+
+        string keyPart;
+        if (code >= Keys.A && code <= Keys.Z)
+            keyPart = ((char)('A' + (code - Keys.A))).ToString();  // Ctrl+C (geleneksel büyük harf)
+        else if (resolved is char rc2)
+            keyPart = DisplayChar(rc2);                            // Ctrl+ş (daha önce öğrenilen karakter)
+        else
+            keyPart = FriendlyName(code);                          // Ctrl+F5, Ctrl+Space vb.
+        parts.Add(keyPart);
+
         return string.Join("+", parts);
     }
 
