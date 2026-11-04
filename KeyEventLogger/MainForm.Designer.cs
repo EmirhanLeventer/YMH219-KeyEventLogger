@@ -126,10 +126,13 @@ partial class MainForm
         Controls.Add(lstLog);
         Controls.Add(lblCount);
         Controls.Add(pnlTop);
+        KeyPreview = true;
         MinimumSize = new Size(560, 300);
         Name = "MainForm";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Key Event Logger";
+        KeyDown += MainForm_KeyDown;
+        KeyUp += MainForm_KeyUp;
         pnlTop.ResumeLayout(false);
         ResumeLayout(false);
         PerformLayout();
