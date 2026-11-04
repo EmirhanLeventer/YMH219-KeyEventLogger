@@ -34,9 +34,7 @@ public partial class MainForm : Form
     private void btnStart_Click(object? sender, EventArgs e)
     {
         _session.Start();
-        // Odağı butondan al; böylece tuş olayları doğrudan Form'a gelir (KeyPreview).
-        // Bu olmazsa odaktaki buton ilk KeyDown'ı "yutabiliyor".
-        ActiveControl = null;
+        FocusLogList();
     }
 
     private void btnStop_Click(object? sender, EventArgs e)
@@ -47,6 +45,20 @@ public partial class MainForm : Form
     private void btnClear_Click(object? sender, EventArgs e)
     {
         _session.Clear();
+        if (_session.IsRecording)
+            FocusLogList();
+    }
+
+    /// <summary>
+    /// Kayıt sırasında odağı, buton olmayan ListBox'ta tutar. Böylece:
+    /// 1) Tuşlar butonları yanlışlıkla tetiklemez (Space/Enter),
+    /// 2) KeyPress olayı serbestçe çalışır ve gerçek karakteri verir,
+    /// 3) ilk KeyDown bir butona takılıp kaybolmaz.
+    /// ListBox'ın SelectionMode'u None olduğu için harfler listede gezinmeye yol açmaz.
+    /// </summary>
+    private void FocusLogList()
+    {
+        lstLog.Focus();
     }
 
     // ---- Klavye olayları ----
@@ -57,15 +69,16 @@ public partial class MainForm : Form
     {
         _lastDownCode = e.KeyCode;
         string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
-        if (_session.Add(KeyEventKind.KeyDown, name))
-            SuppressUnlessAlt(e);
+        _session.Add(KeyEventKind.KeyDown, name);
+        // Not: SuppressKeyPress KULLANMIYORUZ; kullansaydık KeyPress olayı da engellenir
+        // ve gerçek karakteri (ör. Türkçe 'ş') okuyamazdık. Butonların tetiklenmesini
+        // odağı ListBox'ta tutarak (FocusLogList) engelliyoruz.
     }
 
     private void MainForm_KeyUp(object? sender, KeyEventArgs e)
     {
         string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
-        if (_session.Add(KeyEventKind.KeyUp, name))
-            SuppressUnlessAlt(e);
+        _session.Add(KeyEventKind.KeyUp, name);
     }
 
     /// <summary>
@@ -139,17 +152,6 @@ public partial class MainForm : Form
     }
 
     // ---- Yardımcılar ----
-
-    /// <summary>
-    /// Kayıt açıkken tuşun butonlara ulaşmasını engeller (Space/Enter ile yanlışlıkla tıklanmasın).
-    /// Alt'lı tuşlara dokunmaz; böylece Alt+F4 ile pencere her zaman kapatılabilir
-    /// (kapanmadan önce olay yine de kaydedilir).
-    /// </summary>
-    private static void SuppressUnlessAlt(KeyEventArgs e)
-    {
-        if (!e.Alt)
-            e.SuppressKeyPress = true;
-    }
 
     /// <summary>
     /// Tab ve ok tuşları normalde "diyalog tuşu"dur: odağı değiştirir ve KeyDown olayı oluşmaz.

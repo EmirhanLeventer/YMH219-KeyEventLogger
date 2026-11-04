@@ -60,6 +60,7 @@ partial class MainForm
         btnStart.Name = "btnStart";
         btnStart.Size = new Size(110, 36);
         btnStart.TabIndex = 0;
+        btnStart.TabStop = false;
         btnStart.Text = "▶ Başlat";
         btnStart.UseVisualStyleBackColor = true;
         btnStart.Click += btnStart_Click;
@@ -70,6 +71,7 @@ partial class MainForm
         btnStop.Name = "btnStop";
         btnStop.Size = new Size(110, 36);
         btnStop.TabIndex = 1;
+        btnStop.TabStop = false;
         btnStop.Text = "■ Durdur";
         btnStop.UseVisualStyleBackColor = true;
         btnStop.Click += btnStop_Click;
@@ -80,6 +82,7 @@ partial class MainForm
         btnClear.Name = "btnClear";
         btnClear.Size = new Size(110, 36);
         btnClear.TabIndex = 2;
+        btnClear.TabStop = false;
         btnClear.Text = "Temizle";
         btnClear.UseVisualStyleBackColor = true;
         btnClear.Click += btnClear_Click;
@@ -103,6 +106,7 @@ partial class MainForm
         lstLog.IntegralHeight = false;
         lstLog.Location = new Point(0, 58);
         lstLog.Name = "lstLog";
+        lstLog.SelectionMode = SelectionMode.None;
         lstLog.Size = new Size(760, 394);
         lstLog.TabIndex = 1;
         lstLog.TabStop = false;
