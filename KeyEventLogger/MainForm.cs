@@ -8,6 +8,14 @@ public partial class MainForm : Form
 {
     private readonly KeyLogSession _session = new KeyLogSession();
 
+    // KeyPress ile öğrenilen gerçek karakteri, en son eklenen KeyDown satırına yansıtmak için.
+    private Keys _lastDownCode = Keys.None;
+    private KeyEventRecord? _pendingDownRecord;
+    private int _pendingDownIndex = -1;
+
+    // Her fiziksel tuşun ürettiği gerçek karakter (Türkçe harfler, noktalama vb.).
+    private readonly Dictionary<Keys, char> _charByCode = new Dictionary<Keys, char>();
+
     public MainForm()
     {
         InitializeComponent();
@@ -21,25 +29,121 @@ public partial class MainForm : Form
         UpdateUi();
     }
 
+    // ---- Buton olayları: işi oturuma devreder ----
+
+    private void btnStart_Click(object? sender, EventArgs e)
+    {
+        _session.Start();
+        // Odağı butondan al; böylece tuş olayları doğrudan Form'a gelir (KeyPreview).
+        // Bu olmazsa odaktaki buton ilk KeyDown'ı "yutabiliyor".
+        ActiveControl = null;
+    }
+
+    private void btnStop_Click(object? sender, EventArgs e)
+    {
+        _session.Stop();
+    }
+
+    private void btnClear_Click(object? sender, EventArgs e)
+    {
+        _session.Clear();
+    }
+
     // ---- Klavye olayları ----
     // KeyPreview = true olduğu için, odak hangi kontrolde olursa olsun tuş olayları önce Form'a gelir.
     // Bu olaylar yalnızca BU pencere aktifken oluşur; başka uygulamalardaki tuşlar yakalanmaz.
 
     private void MainForm_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (_session.Add(KeyEventKind.KeyDown, DescribeKey(e)))
+        _lastDownCode = e.KeyCode;
+        string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
+        if (_session.Add(KeyEventKind.KeyDown, name))
             SuppressUnlessAlt(e);
     }
 
     private void MainForm_KeyUp(object? sender, KeyEventArgs e)
     {
-        if (_session.Add(KeyEventKind.KeyUp, DescribeKey(e)))
+        string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
+        if (_session.Add(KeyEventKind.KeyUp, name))
             SuppressUnlessAlt(e);
     }
 
     /// <summary>
+    /// KeyPress yalnızca karakter üreten tuşlarda oluşur ve klavye düzenini (Türkçe Q vb.)
+    /// dikkate alarak gerçek karakteri verir. Bu karakteri hem önbelleğe alırız hem de
+    /// hemen önce eklenen KeyDown satırının adını düzeltmek için kullanırız.
+    /// </summary>
+    private void MainForm_KeyPress(object? sender, KeyPressEventArgs e)
+    {
+        char c = e.KeyChar;
+        if (char.IsControl(c))
+            return; // Enter, Tab, Ctrl+C gibi tuşların KeyPress karakteri okunmaz; dostane adı kullanılır.
+
+        _charByCode[_lastDownCode] = c;
+
+        if (_pendingDownRecord != null &&
+            _pendingDownIndex >= 0 && _pendingDownIndex < lstLog.Items.Count)
+        {
+            _pendingDownRecord.SetKeyName(DisplayChar(c));
+            lstLog.Items[_pendingDownIndex] = _pendingDownRecord; // satırı yeniden çizdir
+            _pendingDownRecord = null;
+        }
+    }
+
+    // ---- Oturum olayları: ekranı günceller ----
+
+    private void Session_RecordAdded(object? sender, KeyEventRecord record)
+    {
+        int index = lstLog.Items.Add(record);        // ListBox, record.ToString() metnini gösterir
+        lstLog.TopIndex = lstLog.Items.Count - 1;     // en son kayda kaydır
+
+        // Yalnızca KeyDown kayıtlarını, KeyPress ile düzeltilebilsin diye hatırla.
+        if (record.Kind == KeyEventKind.KeyDown)
+        {
+            _pendingDownRecord = record;
+            _pendingDownIndex = index;
+        }
+
+        UpdateUi();
+    }
+
+    private void Session_RecordingStateChanged(object? sender, EventArgs e)
+    {
+        UpdateUi();
+    }
+
+    private void Session_RecordsCleared(object? sender, EventArgs e)
+    {
+        lstLog.Items.Clear();
+        _pendingDownRecord = null;
+        _pendingDownIndex = -1;
+        UpdateUi();
+    }
+
+    /// <summary>
+    /// Butonların aktifliğini, durum göstergesini ve sayacı oturumun güncel durumuna göre ayarlar.
+    /// </summary>
+    private void UpdateUi()
+    {
+        bool recording = _session.IsRecording;
+
+        btnStart.Enabled = !recording;
+        btnStop.Enabled = recording;
+        btnClear.Enabled = _session.Records.Count > 0;
+
+        lblStatus.Text = recording ? "● KAYIT AÇIK" : "● KAYIT KAPALI";
+        lblStatus.ForeColor = recording ? Color.ForestGreen : Color.Firebrick;
+        Text = recording ? "Key Event Logger — KAYIT AÇIK" : "Key Event Logger";
+
+        lblCount.Text = $"Toplam kayıt: {_session.Records.Count}";
+    }
+
+    // ---- Yardımcılar ----
+
+    /// <summary>
     /// Kayıt açıkken tuşun butonlara ulaşmasını engeller (Space/Enter ile yanlışlıkla tıklanmasın).
-    /// Alt'lı tuşlara dokunmaz; böylece Alt+F4 ile pencere her zaman kapatılabilir.
+    /// Alt'lı tuşlara dokunmaz; böylece Alt+F4 ile pencere her zaman kapatılabilir
+    /// (kapanmadan önce olay yine de kaydedilir).
     /// </summary>
     private static void SuppressUnlessAlt(KeyEventArgs e)
     {
@@ -65,80 +169,74 @@ public partial class MainForm : Form
         }
     }
 
-    /// <summary>
-    /// Tuşu okunur bir ada çevirir. Örnekler: "A", "Ctrl+C", "Shift+D1", "Shift".
-    /// </summary>
-    private static string DescribeKey(KeyEventArgs e)
+    private char? CachedChar(Keys code)
     {
-        // Değiştirici tuşun kendisine basıldıysa yalnızca adını yaz.
-        switch (e.KeyCode)
-        {
-            case Keys.ControlKey: return "Ctrl";
-            case Keys.ShiftKey: return "Shift";
-            case Keys.Menu: return "Alt";
-        }
+        return _charByCode.TryGetValue(code, out char c) ? c : (char?)null;
+    }
+
+    /// <summary>
+    /// Tuşu okunur bir ada çevirir. Öncelik sırası:
+    /// 1) Değiştirici tuşun kendisi → "Ctrl"/"Shift"/"Alt"
+    /// 2) Ctrl/Alt yoksa ve gerçek karakter biliniyorsa → o karakter (ör. "ş", "A", "@")
+    /// 3) Aksi halde değiştirici öneki + dostane tuş adı (ör. "Ctrl+C", "Shift+Tab", "F5")
+    /// </summary>
+    private string NameFor(Keys code, bool ctrl, bool alt, bool shift, char? resolved)
+    {
+        if (code is Keys.ControlKey or Keys.LControlKey or Keys.RControlKey) return "Ctrl";
+        if (code is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey) return "Shift";
+        if (code is Keys.Menu or Keys.LMenu or Keys.RMenu) return "Alt";
+
+        if (resolved is char rc && !ctrl && !alt)
+            return DisplayChar(rc);
 
         var parts = new List<string>();
-        if (e.Control) parts.Add("Ctrl");
-        if (e.Alt) parts.Add("Alt");
-        if (e.Shift) parts.Add("Shift");
-        parts.Add(e.KeyCode.ToString());
-
+        if (ctrl) parts.Add("Ctrl");
+        if (alt) parts.Add("Alt");
+        if (shift) parts.Add("Shift");
+        parts.Add(FriendlyName(code));
         return string.Join("+", parts);
     }
 
-    // ---- Buton olayları: işi oturuma devreder ----
-
-    private void btnStart_Click(object? sender, EventArgs e)
+    private static string DisplayChar(char c)
     {
-        _session.Start();
-    }
-
-    private void btnStop_Click(object? sender, EventArgs e)
-    {
-        _session.Stop();
-    }
-
-    private void btnClear_Click(object? sender, EventArgs e)
-    {
-        _session.Clear();
-    }
-
-    // ---- Oturum olayları: ekranı günceller ----
-
-    private void Session_RecordAdded(object? sender, KeyEventRecord record)
-    {
-        lstLog.Items.Add(record);                    // ListBox, record.ToString() metnini gösterir
-        lstLog.TopIndex = lstLog.Items.Count - 1;    // en son kayda kaydır
-        UpdateUi();
-    }
-
-    private void Session_RecordingStateChanged(object? sender, EventArgs e)
-    {
-        UpdateUi();
-    }
-
-    private void Session_RecordsCleared(object? sender, EventArgs e)
-    {
-        lstLog.Items.Clear();
-        UpdateUi();
+        return c == ' ' ? "Space" : c.ToString();
     }
 
     /// <summary>
-    /// Butonların aktifliğini, durum göstergesini ve sayacı oturumun güncel durumuna göre ayarlar.
+    /// Karakter üretmeyen/özel tuşlar için okunur ad. Türkçe/OEM harfler için bu metot yerine
+    /// KeyPress'ten gelen gerçek karakter kullanılır.
     /// </summary>
-    private void UpdateUi()
+    private static string FriendlyName(Keys code)
     {
-        bool recording = _session.IsRecording;
+        switch (code)
+        {
+            case Keys.Space: return "Space";
+            case Keys.Return: return "Enter";
+            case Keys.Escape: return "Esc";
+            case Keys.Back: return "Backspace";
+            case Keys.Tab: return "Tab";
+            case Keys.Delete: return "Delete";
+            case Keys.Insert: return "Insert";
+            case Keys.Home: return "Home";
+            case Keys.End: return "End";
+            case Keys.PageUp: return "PageUp";
+            case Keys.PageDown: return "PageDown";
+            case Keys.Left: return "←";
+            case Keys.Right: return "→";
+            case Keys.Up: return "↑";
+            case Keys.Down: return "↓";
+            case Keys.CapsLock: return "CapsLock";
+        }
 
-        btnStart.Enabled = !recording;
-        btnStop.Enabled = recording;
-        btnClear.Enabled = _session.Records.Count > 0;
+        if (code >= Keys.A && code <= Keys.Z)
+            return code.ToString();
+        if (code >= Keys.D0 && code <= Keys.D9)
+            return ((char)('0' + (code - Keys.D0))).ToString();
+        if (code >= Keys.NumPad0 && code <= Keys.NumPad9)
+            return "Num" + (code - Keys.NumPad0);
+        if (code >= Keys.F1 && code <= Keys.F24)
+            return code.ToString();
 
-        lblStatus.Text = recording ? "● KAYIT AÇIK" : "● KAYIT KAPALI";
-        lblStatus.ForeColor = recording ? Color.ForestGreen : Color.Firebrick;
-        Text = recording ? "Key Event Logger — KAYIT AÇIK" : "Key Event Logger";
-
-        lblCount.Text = $"Toplam kayıt: {_session.Records.Count}";
+        return code.ToString(); // Son çare: ham ad (çok kısa süre görünür, KeyPress düzeltir).
     }
 }

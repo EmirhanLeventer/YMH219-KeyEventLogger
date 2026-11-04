@@ -18,7 +18,7 @@ namespace KeyEventLogger
     {
         public DateTime Time { get; }
         public KeyEventKind Kind { get; }
-        public string KeyName { get; }
+        public string KeyName { get; private set; }
 
         public KeyEventRecord(DateTime time, KeyEventKind kind, string keyName)
         {
@@ -27,6 +27,19 @@ namespace KeyEventLogger
 
             Time = time;
             Kind = kind;
+            KeyName = keyName;
+        }
+
+        /// <summary>
+        /// Tuş adını günceller. Normalde kayıtlar değişmez; ancak KeyDown anında tuşun
+        /// ürettiği gerçek karakter (ör. Türkçe 'ş') henüz bilinmez. Hemen ardından gelen
+        /// KeyPress olayı karakteri öğrenince, o KeyDown kaydının adı bir kez düzeltilir.
+        /// </summary>
+        internal void SetKeyName(string keyName)
+        {
+            if (string.IsNullOrWhiteSpace(keyName))
+                throw new ArgumentException("Tuş adı boş olamaz.", nameof(keyName));
+
             KeyName = keyName;
         }
 

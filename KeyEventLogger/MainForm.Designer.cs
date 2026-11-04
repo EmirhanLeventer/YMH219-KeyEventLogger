@@ -133,6 +133,7 @@ partial class MainForm
         Text = "Key Event Logger";
         KeyDown += MainForm_KeyDown;
         KeyUp += MainForm_KeyUp;
+        KeyPress += MainForm_KeyPress;
         pnlTop.ResumeLayout(false);
         ResumeLayout(false);
         PerformLayout();
