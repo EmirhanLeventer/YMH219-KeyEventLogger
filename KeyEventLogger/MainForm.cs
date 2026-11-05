@@ -205,10 +205,11 @@ public partial class MainForm : Form
 
     // ---- Tema (görünüm) ----
 
-    // Her butonun AKTİF renkleri (pasifken soluk griye döneriz).
-    private readonly Dictionary<Button, (Color Back, Color Fore)> _btnColors = new();
-    private static readonly Color DisabledBack = Color.FromArgb(240, 241, 243);
-    private static readonly Color DisabledFore = Color.FromArgb(176, 180, 185);
+    // Her butonun aktif renkleri ve stili. "Bordered" olanlar nötr (ikincil) butonlardır:
+    // aktifken beyaz + kenarlıklı, pasifken soluk gri. Dolu (yeşil/kırmızı) butonlar bordered=false.
+    private readonly Dictionary<Button, (Color Back, Color Fore, bool Bordered)> _btnColors = new();
+    private static readonly Color DisabledBack = Color.FromArgb(238, 239, 241);
+    private static readonly Color DisabledFore = Color.FromArgb(173, 177, 182);
 
     private void ApplyTheme()
     {
@@ -219,32 +220,48 @@ public partial class MainForm : Form
         lstLog.BackColor = Color.White;
         lstLog.ForeColor = Color.FromArgb(33, 37, 41);
 
-        StyleButton(btnStart, Color.FromArgb(39, 174, 96), Color.White);   // yeşil
-        StyleButton(btnStop, Color.FromArgb(192, 57, 43), Color.White);    // kırmızı
+        StyleButton(btnStart, Color.FromArgb(39, 174, 96), Color.White, bordered: false); // yeşil dolu
+        StyleButton(btnStop, Color.FromArgb(192, 57, 43), Color.White, bordered: false);  // kırmızı dolu
         foreach (var b in new[] { btnClear, btnSave, btnStats, btnFilter, btnShowAll })
-            StyleButton(b, Color.FromArgb(222, 226, 230), Color.FromArgb(52, 58, 64)); // nötr gri
+            StyleButton(b, Color.White, Color.FromArgb(52, 58, 64), bordered: true);       // nötr, kenarlıklı
     }
 
-    private void StyleButton(Button b, Color back, Color fore)
+    private void StyleButton(Button b, Color back, Color fore, bool bordered)
     {
         b.FlatStyle = FlatStyle.Flat;
-        b.FlatAppearance.BorderSize = 0;
-        b.FlatAppearance.MouseOverBackColor = ControlPaint.Light(back, 0.15f);
-        b.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(back, 0.05f);
+        b.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(bordered ? Color.FromArgb(233, 236, 239) : back, 0.03f);
 
-        _btnColors[b] = (back, fore);
-        // Enabled değişince renkleri otomatik güncelle (pasif = soluk gri).
+        _btnColors[b] = (back, fore, bordered);
+        // Enabled değişince görünümü otomatik güncelle.
         b.EnabledChanged += (s, e) => ApplyButtonState(b);
         ApplyButtonState(b);
     }
 
     private void ApplyButtonState(Button b)
     {
-        var (back, fore) = _btnColors[b];
+        var (back, fore, bordered) = _btnColors[b];
         bool on = b.Enabled;
-        b.BackColor = on ? back : DisabledBack;
-        b.ForeColor = on ? fore : DisabledFore;
-        b.Cursor = on ? Cursors.Hand : Cursors.Default;
+
+        if (on)
+        {
+            b.BackColor = back;
+            b.ForeColor = fore;
+            b.Cursor = Cursors.Hand;
+            b.FlatAppearance.MouseOverBackColor = bordered
+                ? Color.FromArgb(241, 243, 245)
+                : ControlPaint.Light(back, 0.12f);
+            b.FlatAppearance.BorderSize = bordered ? 1 : 0;
+            b.FlatAppearance.BorderColor = Color.FromArgb(206, 212, 218); // belirgin kenarlık
+        }
+        else
+        {
+            b.BackColor = bordered ? Color.FromArgb(245, 246, 247) : DisabledBack;
+            b.ForeColor = DisabledFore;
+            b.Cursor = Cursors.Default;
+            b.FlatAppearance.MouseOverBackColor = b.BackColor;
+            b.FlatAppearance.BorderSize = bordered ? 1 : 0;
+            b.FlatAppearance.BorderColor = Color.FromArgb(230, 232, 235); // soluk kenarlık
+        }
     }
 
     /// <summary>
