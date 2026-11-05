@@ -197,7 +197,7 @@ public partial class MainForm : Form
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern uint MapVirtualKeyEx(uint uCode, uint uMapType, IntPtr dwhkl);
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
     private static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
         System.Text.StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
 
