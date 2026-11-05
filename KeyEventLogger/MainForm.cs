@@ -23,6 +23,9 @@ public partial class MainForm : Form
     private static readonly System.Globalization.CultureInfo Tr =
         System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
 
+    // Son kaydetmeden sonra yeni kayıt eklendi mi? (çıkışta uyarı için)
+    private bool _dirty = false;
+
     public MainForm()
     {
         InitializeComponent();
@@ -52,6 +55,19 @@ public partial class MainForm : Form
 
     private void btnClear_Click(object? sender, EventArgs e)
     {
+        // Yanlışlıkla silmeyi önlemek için onay iste.
+        if (_session.Records.Count > 0)
+        {
+            var result = MessageBox.Show("Ekrandaki tüm kayıtlar silinsin mi?", "Temizle",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.No)
+            {
+                if (_session.IsRecording)
+                    FocusLogList();
+                return;
+            }
+        }
+
         _session.Clear();
         if (_session.IsRecording)
             FocusLogList();
@@ -80,6 +96,7 @@ public partial class MainForm : Form
             try
             {
                 LogFileWriter.Save(dialog.FileName, _session.Records);
+                _dirty = false; // başarıyla kaydedildi
                 MessageBox.Show($"{_session.Records.Count} kayıt kaydedildi:\n{dialog.FileName}",
                     "Kaydedildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -173,6 +190,7 @@ public partial class MainForm : Form
             _pendingDownIndex = index;
         }
 
+        _dirty = true; // kaydedilmemiş yeni kayıt var
         UpdateUi();
     }
 
@@ -186,7 +204,21 @@ public partial class MainForm : Form
         lstLog.Items.Clear();
         _pendingDownRecord = null;
         _pendingDownIndex = -1;
+        _dirty = false; // silindi, kaybedilecek kayıt yok
         UpdateUi();
+    }
+
+    private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
+    {
+        // Kaydedilmemiş kayıt varken kapatmaya çalışırsa uyar (veri kaybını önle).
+        if (_dirty && _session.Records.Count > 0)
+        {
+            var result = MessageBox.Show(
+                "Kaydedilmemiş kayıtlar var. Yine de çıkmak istiyor musunuz?",
+                "Çıkış", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result == DialogResult.No)
+                e.Cancel = true; // kapanmayı iptal et
+        }
     }
 
     /// <summary>

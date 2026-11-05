@@ -151,6 +151,7 @@ partial class MainForm
         KeyDown += MainForm_KeyDown;
         KeyUp += MainForm_KeyUp;
         KeyPress += MainForm_KeyPress;
+        FormClosing += MainForm_FormClosing;
         pnlTop.ResumeLayout(false);
         ResumeLayout(false);
         PerformLayout();
