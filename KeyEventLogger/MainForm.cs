@@ -176,6 +176,28 @@ public partial class MainForm : Form
         return _charByCode.TryGetValue(code, out char c) ? c : (char?)null;
     }
 
+    private const uint MAPVK_VK_TO_CHAR = 0x02;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+    /// <summary>
+    /// Fiziksel tuşun, geçerli klavye düzenindeki (ör. Türkçe Q) temel karakterini döndürür.
+    /// Bu YALNIZCA bir düzen çevirisidir: tuş kodunu karaktere çevirir. Klavye dinlemez,
+    /// hook kurmaz, başka uygulamadan veri almaz, arka planda çalışmaz, tuş durumu okumaz.
+    /// Yani föydeki gözetim yasaklarının hiçbirine girmez. Yalnızca KeyPress'ten karakter
+    /// alınamayan durumlar için yedektir (ör. Ctrl'lü tuşun ilk basışında önbellek boşken).
+    /// </summary>
+    private static char? LayoutChar(Keys code)
+    {
+        uint r = MapVirtualKey((uint)code, MAPVK_VK_TO_CHAR);
+        if (r == 0) return null;
+        if ((r & 0x80000000) != 0) return null; // ölü tuş (dead key)
+        char c = (char)(r & 0xFFFF);
+        if (c == 0 || char.IsControl(c)) return null;
+        return c;
+    }
+
     /// <summary>
     /// Tuşu okunur bir ada çevirir. Öncelik sırası:
     /// 1) Değiştirici tuşun kendisi → "Ctrl"/"Shift"/"Alt"
@@ -202,7 +224,10 @@ public partial class MainForm : Form
             // Türkçe/OEM/sembol/boşluk: KeyPress'ten öğrenilen gerçek karakter.
             if (resolved is char rc)
                 return DisplayChar(rc);
-            // Henüz bilinmiyor (bu tuşun ilk basışı): dostane ad; KeyPress hemen düzeltir.
+            // İlk basış ve önbellek boşsa: klavye düzeninden çevir (ör. Türkçe 'ş').
+            if (LayoutChar(code) is char lc)
+                return DisplayChar(lc);
+            // Karakteri hiç çözülemeyen tuşlar (ok, F-tuşları vb.): dostane ad.
             return FriendlyName(code);
         }
 
@@ -216,7 +241,9 @@ public partial class MainForm : Form
         if (code >= Keys.A && code <= Keys.Z)
             keyPart = ((char)('A' + (code - Keys.A))).ToString();  // Ctrl+C (geleneksel büyük harf)
         else if (resolved is char rc2)
-            keyPart = DisplayChar(rc2);                            // Ctrl+ş (daha önce öğrenilen karakter)
+            keyPart = DisplayChar(rc2);                            // Ctrl+ş (önbellekten)
+        else if (LayoutChar(code) is char lc2)
+            keyPart = DisplayChar(lc2);                            // Ctrl+ş (ilk basışta düzen çevirisiyle)
         else
             keyPart = FriendlyName(code);                          // Ctrl+F5, Ctrl+Space vb.
         parts.Add(keyPart);
