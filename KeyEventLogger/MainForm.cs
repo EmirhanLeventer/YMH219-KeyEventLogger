@@ -13,8 +13,15 @@ public partial class MainForm : Form
     private KeyEventRecord? _pendingDownRecord;
     private int _pendingDownIndex = -1;
 
-    // Her fiziksel tuşun ürettiği gerçek karakter (Türkçe harfler, noktalama vb.).
+    // Her fiziksel tuşun ürettiği gerçek karakter (KeyPress'ten; shift'li hâli de dahil).
     private readonly Dictionary<Keys, char> _charByCode = new Dictionary<Keys, char>();
+
+    // Klavye düzeninin DEĞİŞMEZ temel (shift'siz, küçük) karakter haritası; açılışta bir kez doldurulur.
+    private readonly Dictionary<Keys, char> _baseCharByCode = new Dictionary<Keys, char>();
+
+    // Türkçe büyük/küçük dönüşümü için (ı↔I, i↔İ).
+    private static readonly System.Globalization.CultureInfo Tr =
+        System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
 
     public MainForm()
     {
@@ -232,7 +239,7 @@ public partial class MainForm : Form
                 continue;
             }
             if (rc > 0 && sb.Length > 0 && !char.IsControl(sb[0]))
-                _charByCode[(Keys)vk] = sb[0];
+                _baseCharByCode[(Keys)vk] = sb[0];
         }
     }
 
@@ -249,19 +256,27 @@ public partial class MainForm : Form
         if (code is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey) return "Shift";
         if (code is Keys.Menu or Keys.LMenu or Keys.RMenu) return "Alt";
 
+        // Tuşun klavye düzenindeki temel (shift'siz, küçük) karakteri. Harf mi, onu buradan anlarız.
+        char? baseC = _baseCharByCode.TryGetValue(code, out char bc) ? bc : (char?)null;
+        bool isLetter = baseC is char bl && char.IsLetter(bl);
+
         // 2) Ctrl/Alt yoksa tek karakter göster.
         if (!ctrl && !alt)
         {
-            // Harfler: büyük/küçük durumunu o anki Shift + CapsLock'tan KESİN hesapla.
-            // (Önbelleğe güvenmeyiz; böylece ilk basışta doğru olur, titreme olmaz.)
-            if (code >= Keys.A && code <= Keys.Z)
+            // Harfler (Türkçe dahil): büyük/küçük durumunu o anki Shift + CapsLock'tan KESİN hesapla.
+            // Temel harfi klavye düzeninden alırız (VK_I Türkçe Q'da 'ı' üretir, 'i' değil), böylece
+            // KeyDown ve KeyUp AYNI harfi yazar ve ilk basışta titreme/yanlış büyük-küçük olmaz.
+            if (isLetter)
             {
                 bool upper = shift ^ Control.IsKeyLocked(Keys.CapsLock);
-                return ((char)((upper ? 'A' : 'a') + (code - Keys.A))).ToString();
+                char b = baseC!.Value;
+                return (upper ? char.ToUpper(b, Tr) : b).ToString();
             }
-            // Türkçe/OEM/sembol/boşluk: KeyPress'ten veya açılış ön-ısıtmasından gelen gerçek karakter.
+            // Harf olmayan (rakam/sembol): shift farklı sembol üretebilir -> KeyPress'ten gelen gerçek karakter.
             if (resolved is char rc)
                 return DisplayChar(rc);
+            if (baseC is char b2)
+                return DisplayChar(b2);
             // Karakteri olmayan tuşlar (ok, F-tuşları vb.): dostane ad.
             return FriendlyName(code);
         }
@@ -273,12 +288,14 @@ public partial class MainForm : Form
         if (shift) parts.Add("Shift");
 
         string keyPart;
-        if (code >= Keys.A && code <= Keys.Z)
-            keyPart = ((char)('A' + (code - Keys.A))).ToString();  // Ctrl+C (geleneksel büyük harf)
+        if (isLetter)
+            keyPart = char.ToUpper(baseC!.Value, Tr).ToString();  // Ctrl+C, Ctrl+Ş (geleneksel büyük harf)
         else if (resolved is char rc2)
-            keyPart = DisplayChar(rc2);                            // Ctrl+ş (önbellek / açılış ön-ısıtması)
+            keyPart = DisplayChar(rc2);                            // Ctrl+1 vb.
+        else if (baseC is char b3)
+            keyPart = DisplayChar(b3);                             // Ctrl+ş (ilk basışta düzen haritasından)
         else
-            keyPart = FriendlyName(code);                          // Ctrl+F5, Ctrl+Space vb.
+            keyPart = FriendlyName(code);                         // Ctrl+F5, Ctrl+Space vb.
         parts.Add(keyPart);
 
         return string.Join("+", parts);
