@@ -25,6 +25,7 @@ public partial class MainForm : Form
         _session.RecordingStateChanged += Session_RecordingStateChanged;
         _session.RecordsCleared += Session_RecordsCleared;
 
+        PrewarmLayoutChars();
         AttachPreviewKeyDown(this);
         UpdateUi();
     }
@@ -68,17 +69,29 @@ public partial class MainForm : Form
     private void MainForm_KeyDown(object? sender, KeyEventArgs e)
     {
         _lastDownCode = e.KeyCode;
+        if (!_session.IsRecording)
+            return;
+
         string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
         _session.Add(KeyEventKind.KeyDown, name);
-        // Not: SuppressKeyPress KULLANMIYORUZ; kullansaydık KeyPress olayı da engellenir
-        // ve gerçek karakteri (ör. Türkçe 'ş') okuyamazdık. Butonların tetiklenmesini
-        // odağı ListBox'ta tutarak (FocusLogList) engelliyoruz.
+
+        // Tuşun yan etkilerini (ListBox kaydırma, ok ile odak değişimi, Space/Enter ile buton tıklama)
+        // engelle. Handled kullanıyoruz; SuppressKeyPress DEĞİL -> KeyPress yine çalışıp karakteri verir.
+        // Alt'lı tuşlara dokunmuyoruz ki Alt+F4 pencereyi kapatabilsin.
+        if (!e.Alt)
+            e.Handled = true;
     }
 
     private void MainForm_KeyUp(object? sender, KeyEventArgs e)
     {
+        if (!_session.IsRecording)
+            return;
+
         string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
         _session.Add(KeyEventKind.KeyUp, name);
+
+        if (!e.Alt)
+            e.Handled = true;
     }
 
     /// <summary>
@@ -176,26 +189,52 @@ public partial class MainForm : Form
         return _charByCode.TryGetValue(code, out char c) ? c : (char?)null;
     }
 
-    private const uint MAPVK_VK_TO_CHAR = 0x02;
+    private const uint MAPVK_VK_TO_VSC = 0x00;
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+    private static extern IntPtr GetKeyboardLayout(uint idThread);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint MapVirtualKeyEx(uint uCode, uint uMapType, IntPtr dwhkl);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
+        System.Text.StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
 
     /// <summary>
-    /// Fiziksel tuşun, geçerli klavye düzenindeki (ör. Türkçe Q) temel karakterini döndürür.
-    /// Bu YALNIZCA bir düzen çevirisidir: tuş kodunu karaktere çevirir. Klavye dinlemez,
-    /// hook kurmaz, başka uygulamadan veri almaz, arka planda çalışmaz, tuş durumu okumaz.
-    /// Yani föydeki gözetim yasaklarının hiçbirine girmez. Yalnızca KeyPress'ten karakter
-    /// alınamayan durumlar için yedektir (ör. Ctrl'lü tuşun ilk basışında önbellek boşken).
+    /// Program açılışında bir kez çalışır: klavye düzenindeki (ör. Türkçe Q) her tuşun
+    /// değiştiricisiz (shift'siz) temel karakterini hesaplayıp önbelleğe (_charByCode) koyar.
+    /// Böylece bir tuşa ilk kez basıldığında (özellikle Ctrl'lü, KeyPress'in karakter vermediği
+    /// durumda) bile doğru karakter gösterilebilir.
+    ///
+    /// GÜVENLİK NOTU: Bu bir düzen çevirisidir; tuş kodunu karaktere çevirir. Klavye dinlemez,
+    /// global hook kurmaz, başka uygulamadan veri almaz, arka planda çalışmaz. Üstelik yalnızca
+    /// açılışta bir kez çağrılır. Föydeki gözetim yasaklarının hiçbirine girmez.
     /// </summary>
-    private static char? LayoutChar(Keys code)
+    private void PrewarmLayoutChars()
     {
-        uint r = MapVirtualKey((uint)code, MAPVK_VK_TO_CHAR);
-        if (r == 0) return null;
-        if ((r & 0x80000000) != 0) return null; // ölü tuş (dead key)
-        char c = (char)(r & 0xFFFF);
-        if (c == 0 || char.IsControl(c)) return null;
-        return c;
+        IntPtr hkl = GetKeyboardLayout(0);
+        byte[] keyState = new byte[256]; // tüm değiştiriciler kapalı → temel karakter
+        var sb = new System.Text.StringBuilder(8);
+
+        for (uint vk = 0x20; vk <= 0xFF; vk++)
+        {
+            uint scan = MapVirtualKeyEx(vk, MAPVK_VK_TO_VSC, hkl);
+            if (scan == 0)
+                continue;
+
+            sb.Clear();
+            int rc = ToUnicodeEx(vk, scan, keyState, sb, sb.Capacity, 0, hkl);
+            if (rc < 0)
+            {
+                // Ölü tuş (ör. şapka): kernel durumunu bozmamak için ikinci çağrıyla sıfırla, atla.
+                sb.Clear();
+                ToUnicodeEx(vk, scan, keyState, sb, sb.Capacity, 0, hkl);
+                continue;
+            }
+            if (rc > 0 && sb.Length > 0 && !char.IsControl(sb[0]))
+                _charByCode[(Keys)vk] = sb[0];
+        }
     }
 
     /// <summary>
@@ -221,13 +260,10 @@ public partial class MainForm : Form
                 bool upper = shift ^ Control.IsKeyLocked(Keys.CapsLock);
                 return ((char)((upper ? 'A' : 'a') + (code - Keys.A))).ToString();
             }
-            // Türkçe/OEM/sembol/boşluk: KeyPress'ten öğrenilen gerçek karakter.
+            // Türkçe/OEM/sembol/boşluk: KeyPress'ten veya açılış ön-ısıtmasından gelen gerçek karakter.
             if (resolved is char rc)
                 return DisplayChar(rc);
-            // İlk basış ve önbellek boşsa: klavye düzeninden çevir (ör. Türkçe 'ş').
-            if (LayoutChar(code) is char lc)
-                return DisplayChar(lc);
-            // Karakteri hiç çözülemeyen tuşlar (ok, F-tuşları vb.): dostane ad.
+            // Karakteri olmayan tuşlar (ok, F-tuşları vb.): dostane ad.
             return FriendlyName(code);
         }
 
@@ -241,9 +277,7 @@ public partial class MainForm : Form
         if (code >= Keys.A && code <= Keys.Z)
             keyPart = ((char)('A' + (code - Keys.A))).ToString();  // Ctrl+C (geleneksel büyük harf)
         else if (resolved is char rc2)
-            keyPart = DisplayChar(rc2);                            // Ctrl+ş (önbellekten)
-        else if (LayoutChar(code) is char lc2)
-            keyPart = DisplayChar(lc2);                            // Ctrl+ş (ilk basışta düzen çevirisiyle)
+            keyPart = DisplayChar(rc2);                            // Ctrl+ş (önbellek / açılış ön-ısıtması)
         else
             keyPart = FriendlyName(code);                          // Ctrl+F5, Ctrl+Space vb.
         parts.Add(keyPart);
