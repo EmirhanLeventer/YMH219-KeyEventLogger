@@ -2,15 +2,8 @@
 
 partial class MainForm
 {
-    /// <summary>
-    ///  Required designer variable.
-    /// </summary>
     private System.ComponentModel.IContainer components = null;
 
-    /// <summary>
-    ///  Clean up any resources being used.
-    /// </summary>
-    /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
     {
         if (disposing && (components != null))
@@ -22,129 +15,199 @@ partial class MainForm
 
     #region Windows Form Designer generated code
 
-    /// <summary>
-    ///  Required method for Designer support - do not modify
-    ///  the contents of this method with the code editor.
-    /// </summary>
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
-        pnlTop = new FlowLayoutPanel();
+
+        pnlToolbar = new FlowLayoutPanel();
         btnStart = new Button();
         btnStop = new Button();
         btnClear = new Button();
         btnSave = new Button();
         btnStats = new Button();
         lblStatus = new Label();
+
+        pnlFilter = new FlowLayoutPanel();
+        lblRange = new Label();
+        dtpStart = new DateTimePicker();
+        lblDash = new Label();
+        dtpEnd = new DateTimePicker();
+        btnFilter = new Button();
+        btnShowAll = new Button();
+        lblFilter = new Label();
+
         lstLog = new ListBox();
         lblCount = new Label();
-        pnlTop.SuspendLayout();
+
+        pnlToolbar.SuspendLayout();
+        pnlFilter.SuspendLayout();
         SuspendLayout();
         //
-        // pnlTop
+        // pnlToolbar
         //
-        pnlTop.AutoSize = true;
-        pnlTop.Controls.Add(btnStart);
-        pnlTop.Controls.Add(btnStop);
-        pnlTop.Controls.Add(btnClear);
-        pnlTop.Controls.Add(btnSave);
-        pnlTop.Controls.Add(btnStats);
-        pnlTop.Controls.Add(lblStatus);
-        pnlTop.Dock = DockStyle.Top;
-        pnlTop.Location = new Point(0, 0);
-        pnlTop.Name = "pnlTop";
-        pnlTop.Padding = new Padding(8);
-        pnlTop.Size = new Size(760, 58);
-        pnlTop.TabIndex = 0;
-        pnlTop.WrapContents = false;
+        pnlToolbar.Controls.Add(btnStart);
+        pnlToolbar.Controls.Add(btnStop);
+        pnlToolbar.Controls.Add(btnClear);
+        pnlToolbar.Controls.Add(btnSave);
+        pnlToolbar.Controls.Add(btnStats);
+        pnlToolbar.Controls.Add(lblStatus);
+        pnlToolbar.Dock = DockStyle.Top;
+        pnlToolbar.Name = "pnlToolbar";
+        pnlToolbar.Padding = new Padding(10, 10, 10, 8);
+        pnlToolbar.Size = new Size(860, 56);
+        pnlToolbar.TabIndex = 0;
+        pnlToolbar.WrapContents = false;
         //
         // btnStart
         //
-        btnStart.Location = new Point(11, 11);
+        btnStart.Margin = new Padding(0, 0, 6, 0);
         btnStart.Name = "btnStart";
-        btnStart.Size = new Size(110, 36);
-        btnStart.TabIndex = 0;
+        btnStart.Size = new Size(110, 34);
         btnStart.TabStop = false;
-        btnStart.Text = "▶ Başlat";
-        btnStart.UseVisualStyleBackColor = true;
+        btnStart.Text = "▶  Başlat";
         btnStart.Click += btnStart_Click;
         //
         // btnStop
         //
-        btnStop.Location = new Point(127, 11);
+        btnStop.Margin = new Padding(0, 0, 6, 0);
         btnStop.Name = "btnStop";
-        btnStop.Size = new Size(110, 36);
-        btnStop.TabIndex = 1;
+        btnStop.Size = new Size(110, 34);
         btnStop.TabStop = false;
-        btnStop.Text = "■ Durdur";
-        btnStop.UseVisualStyleBackColor = true;
+        btnStop.Text = "■  Durdur";
         btnStop.Click += btnStop_Click;
         //
         // btnClear
         //
-        btnClear.Location = new Point(243, 11);
+        btnClear.Margin = new Padding(0, 0, 6, 0);
         btnClear.Name = "btnClear";
-        btnClear.Size = new Size(110, 36);
-        btnClear.TabIndex = 2;
+        btnClear.Size = new Size(100, 34);
         btnClear.TabStop = false;
         btnClear.Text = "Temizle";
-        btnClear.UseVisualStyleBackColor = true;
         btnClear.Click += btnClear_Click;
         //
         // btnSave
         //
-        btnSave.Location = new Point(359, 11);
+        btnSave.Margin = new Padding(0, 0, 6, 0);
         btnSave.Name = "btnSave";
-        btnSave.Size = new Size(150, 36);
-        btnSave.TabIndex = 3;
+        btnSave.Size = new Size(150, 34);
         btnSave.TabStop = false;
         btnSave.Text = ".txt olarak kaydet";
-        btnSave.UseVisualStyleBackColor = true;
         btnSave.Click += btnSave_Click;
         //
         // btnStats
         //
-        btnStats.Location = new Point(515, 11);
+        btnStats.Margin = new Padding(0, 0, 6, 0);
         btnStats.Name = "btnStats";
-        btnStats.Size = new Size(110, 36);
-        btnStats.TabIndex = 4;
+        btnStats.Size = new Size(110, 34);
         btnStats.TabStop = false;
         btnStats.Text = "İstatistik";
-        btnStats.UseVisualStyleBackColor = true;
         btnStats.Click += btnStats_Click;
         //
         // lblStatus
         //
+        lblStatus.AutoSize = true;
         lblStatus.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
         lblStatus.ForeColor = Color.Firebrick;
-        lblStatus.Location = new Point(375, 11);
-        lblStatus.Margin = new Padding(19, 3, 3, 3);
+        lblStatus.Margin = new Padding(20, 7, 3, 0);
         lblStatus.Name = "lblStatus";
-        lblStatus.Size = new Size(220, 36);
-        lblStatus.TabIndex = 3;
         lblStatus.Text = "● KAYIT KAPALI";
-        lblStatus.TextAlign = ContentAlignment.MiddleLeft;
+        //
+        // pnlFilter
+        //
+        pnlFilter.Controls.Add(lblRange);
+        pnlFilter.Controls.Add(dtpStart);
+        pnlFilter.Controls.Add(lblDash);
+        pnlFilter.Controls.Add(dtpEnd);
+        pnlFilter.Controls.Add(btnFilter);
+        pnlFilter.Controls.Add(btnShowAll);
+        pnlFilter.Controls.Add(lblFilter);
+        pnlFilter.Dock = DockStyle.Top;
+        pnlFilter.Location = new Point(0, 56);
+        pnlFilter.Name = "pnlFilter";
+        pnlFilter.Padding = new Padding(10, 9, 10, 9);
+        pnlFilter.Size = new Size(860, 48);
+        pnlFilter.TabIndex = 1;
+        pnlFilter.WrapContents = false;
+        //
+        // lblRange
+        //
+        lblRange.AutoSize = true;
+        lblRange.Margin = new Padding(0, 8, 8, 0);
+        lblRange.Name = "lblRange";
+        lblRange.Text = "Aralık:";
+        //
+        // dtpStart
+        //
+        dtpStart.CustomFormat = "dd.MM.yyyy HH:mm:ss";
+        dtpStart.Format = DateTimePickerFormat.Custom;
+        dtpStart.Margin = new Padding(0, 4, 4, 0);
+        dtpStart.Name = "dtpStart";
+        dtpStart.ShowUpDown = true;
+        dtpStart.Size = new Size(150, 23);
+        //
+        // lblDash
+        //
+        lblDash.AutoSize = true;
+        lblDash.Margin = new Padding(0, 8, 4, 0);
+        lblDash.Name = "lblDash";
+        lblDash.Text = "—";
+        //
+        // dtpEnd
+        //
+        dtpEnd.CustomFormat = "dd.MM.yyyy HH:mm:ss";
+        dtpEnd.Format = DateTimePickerFormat.Custom;
+        dtpEnd.Margin = new Padding(0, 4, 8, 0);
+        dtpEnd.Name = "dtpEnd";
+        dtpEnd.ShowUpDown = true;
+        dtpEnd.Size = new Size(150, 23);
+        //
+        // btnFilter
+        //
+        btnFilter.Margin = new Padding(0, 1, 4, 0);
+        btnFilter.Name = "btnFilter";
+        btnFilter.Size = new Size(90, 28);
+        btnFilter.TabStop = false;
+        btnFilter.Text = "Filtrele";
+        btnFilter.Click += btnFilter_Click;
+        //
+        // btnShowAll
+        //
+        btnShowAll.Margin = new Padding(0, 1, 8, 0);
+        btnShowAll.Name = "btnShowAll";
+        btnShowAll.Size = new Size(120, 28);
+        btnShowAll.TabStop = false;
+        btnShowAll.Text = "Tümünü Göster";
+        btnShowAll.Click += btnShowAll_Click;
+        //
+        // lblFilter
+        //
+        lblFilter.AutoSize = true;
+        lblFilter.ForeColor = Color.Gray;
+        lblFilter.Margin = new Padding(8, 8, 0, 0);
+        lblFilter.Name = "lblFilter";
+        lblFilter.Text = "Filtre: yok";
         //
         // lstLog
         //
+        lstLog.BorderStyle = BorderStyle.None;
         lstLog.Dock = DockStyle.Fill;
         lstLog.Font = new Font("Consolas", 10F);
         lstLog.IntegralHeight = false;
-        lstLog.Location = new Point(0, 58);
+        lstLog.ItemHeight = 17;
         lstLog.Name = "lstLog";
         lstLog.SelectionMode = SelectionMode.None;
-        lstLog.Size = new Size(760, 394);
-        lstLog.TabIndex = 1;
+        lstLog.TabIndex = 2;
         lstLog.TabStop = false;
         //
         // lblCount
         //
         lblCount.Dock = DockStyle.Bottom;
-        lblCount.Location = new Point(0, 452);
+        lblCount.Font = new Font("Segoe UI", 9F);
+        lblCount.Location = new Point(0, 530);
         lblCount.Name = "lblCount";
-        lblCount.Padding = new Padding(8, 0, 0, 0);
-        lblCount.Size = new Size(760, 28);
-        lblCount.TabIndex = 2;
+        lblCount.Padding = new Padding(12, 0, 0, 0);
+        lblCount.Size = new Size(860, 30);
+        lblCount.TabIndex = 3;
         lblCount.Text = "Toplam kayıt: 0";
         lblCount.TextAlign = ContentAlignment.MiddleLeft;
         //
@@ -152,12 +215,14 @@ partial class MainForm
         //
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(760, 480);
+        ClientSize = new Size(860, 560);
         Controls.Add(lstLog);
         Controls.Add(lblCount);
-        Controls.Add(pnlTop);
+        Controls.Add(pnlFilter);
+        Controls.Add(pnlToolbar);
+        Font = new Font("Segoe UI", 9.75F);
         KeyPreview = true;
-        MinimumSize = new Size(560, 300);
+        MinimumSize = new Size(680, 420);
         Name = "MainForm";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Key Event Logger";
@@ -165,20 +230,33 @@ partial class MainForm
         KeyUp += MainForm_KeyUp;
         KeyPress += MainForm_KeyPress;
         FormClosing += MainForm_FormClosing;
-        pnlTop.ResumeLayout(false);
+        pnlToolbar.ResumeLayout(false);
+        pnlToolbar.PerformLayout();
+        pnlFilter.ResumeLayout(false);
+        pnlFilter.PerformLayout();
         ResumeLayout(false);
         PerformLayout();
     }
 
     #endregion
 
-    private FlowLayoutPanel pnlTop;
+    private FlowLayoutPanel pnlToolbar;
     private Button btnStart;
     private Button btnStop;
     private Button btnClear;
     private Button btnSave;
     private Button btnStats;
     private Label lblStatus;
+
+    private FlowLayoutPanel pnlFilter;
+    private Label lblRange;
+    private DateTimePicker dtpStart;
+    private Label lblDash;
+    private DateTimePicker dtpEnd;
+    private Button btnFilter;
+    private Button btnShowAll;
+    private Label lblFilter;
+
     private ListBox lstLog;
     private Label lblCount;
 }

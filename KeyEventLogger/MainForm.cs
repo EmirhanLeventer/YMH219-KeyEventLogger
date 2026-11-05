@@ -26,6 +26,9 @@ public partial class MainForm : Form
     // Son kaydetmeden sonra yeni kayıt eklendi mi? (çıkışta uyarı için)
     private bool _dirty = false;
 
+    // Tarih/saat filtresi aktif mi? Aktifken liste canlı güncellenmez (sabit bir görünüm gösterir).
+    private bool _filterActive = false;
+
     public MainForm()
     {
         InitializeComponent();
@@ -37,6 +40,12 @@ public partial class MainForm : Form
 
         PrewarmLayoutChars();
         AttachPreviewKeyDown(this);
+        ApplyTheme();
+
+        // Filtre için makul başlangıç değerleri.
+        dtpStart.Value = DateTime.Today;
+        dtpEnd.Value = DateTime.Now.AddMinutes(1);
+
         UpdateUi();
     }
 
@@ -44,6 +53,8 @@ public partial class MainForm : Form
 
     private void btnStart_Click(object? sender, EventArgs e)
     {
+        // Kayda başlarken filtreyi kaldır ki canlı görünüm devam etsin.
+        ShowAllRecords();
         _session.Start();
         FocusLogList();
     }
@@ -135,6 +146,91 @@ public partial class MainForm : Form
             FocusLogList();
     }
 
+    // ---- Filtreleme ----
+
+    private void btnFilter_Click(object? sender, EventArgs e)
+    {
+        DateTime start = dtpStart.Value;
+        DateTime end = dtpEnd.Value;
+
+        if (end < start)
+        {
+            MessageBox.Show("Bitiş zamanı başlangıçtan önce olamaz.", "Filtre",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // Yalnızca zaman aralığına düşen kayıtları göster (LINQ).
+        var filtered = _session.Records
+            .Where(r => r.Time >= start && r.Time <= end)
+            .ToList();
+
+        _filterActive = true;
+        RenderLog(filtered);
+        lblFilter.Text = $"Filtre: {start:dd.MM HH:mm:ss} – {end:dd.MM HH:mm:ss}  ({filtered.Count} kayıt)";
+        UpdateUi();
+    }
+
+    private void btnShowAll_Click(object? sender, EventArgs e)
+    {
+        ShowAllRecords();
+        if (_session.IsRecording)
+            FocusLogList();
+    }
+
+    /// <summary>Filtreyi kaldırır ve tüm kayıtları gösterir.</summary>
+    private void ShowAllRecords()
+    {
+        _filterActive = false;
+        RenderLog(_session.Records);
+        lblFilter.Text = "Filtre: yok";
+    }
+
+    /// <summary>ListBox'ı verilen kayıt listesiyle yeniden çizer.</summary>
+    private void RenderLog(IEnumerable<KeyEventRecord> records)
+    {
+        // Yeniden çizimde yarım kalmış KeyDown güncellemesi kalmasın.
+        _pendingDownRecord = null;
+        _pendingDownIndex = -1;
+
+        lstLog.BeginUpdate();                 // çok sayıda ekleme sırasında ekranı dondur (performans)
+        lstLog.Items.Clear();
+        foreach (var record in records)
+            lstLog.Items.Add(record);
+        lstLog.EndUpdate();
+
+        if (lstLog.Items.Count > 0)
+            lstLog.TopIndex = lstLog.Items.Count - 1;
+    }
+
+    // ---- Tema (görünüm) ----
+
+    private void ApplyTheme()
+    {
+        BackColor = Color.FromArgb(248, 249, 251);
+        pnlToolbar.BackColor = Color.White;
+        pnlFilter.BackColor = Color.FromArgb(241, 243, 246);
+        lblCount.BackColor = Color.White;
+        lstLog.BackColor = Color.White;
+        lstLog.ForeColor = Color.FromArgb(33, 37, 41);
+
+        StyleButton(btnStart, Color.FromArgb(39, 174, 96), Color.White);   // yeşil
+        StyleButton(btnStop, Color.FromArgb(192, 57, 43), Color.White);    // kırmızı
+        foreach (var b in new[] { btnClear, btnSave, btnStats, btnFilter, btnShowAll })
+            StyleButton(b, Color.FromArgb(233, 236, 239), Color.FromArgb(52, 58, 64)); // nötr gri
+    }
+
+    private static void StyleButton(Button b, Color back, Color fore)
+    {
+        b.FlatStyle = FlatStyle.Flat;
+        b.FlatAppearance.BorderSize = 0;
+        b.BackColor = back;
+        b.ForeColor = fore;
+        b.Cursor = Cursors.Hand;
+        b.FlatAppearance.MouseOverBackColor = ControlPaint.Light(back, 0.15f);
+        b.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(back, 0.05f);
+    }
+
     /// <summary>
     /// Kayıt sırasında odağı, buton olmayan ListBox'ta tutar. Böylece:
     /// 1) Tuşlar butonları yanlışlıkla tetiklemez (Space/Enter),
@@ -204,17 +300,23 @@ public partial class MainForm : Form
 
     private void Session_RecordAdded(object? sender, KeyEventRecord record)
     {
-        int index = lstLog.Items.Add(record);        // ListBox, record.ToString() metnini gösterir
-        lstLog.TopIndex = lstLog.Items.Count - 1;     // en son kayda kaydır
+        _dirty = true; // kaydedilmemiş yeni kayıt var
 
-        // Yalnızca KeyDown kayıtlarını, KeyPress ile düzeltilebilsin diye hatırla.
-        if (record.Kind == KeyEventKind.KeyDown)
+        // Filtre aktifken canlı görünümü karıştırmamak için yeni kaydı listeye eklemeyiz.
+        // (Kayıt yine _session.Records'a eklenir; "Tümünü Göster" ile görünür olur.)
+        if (!_filterActive)
         {
-            _pendingDownRecord = record;
-            _pendingDownIndex = index;
+            int index = lstLog.Items.Add(record);        // ListBox, record.ToString() metnini gösterir
+            lstLog.TopIndex = lstLog.Items.Count - 1;     // en son kayda kaydır
+
+            // Yalnızca KeyDown kayıtlarını, KeyPress ile düzeltilebilsin diye hatırla.
+            if (record.Kind == KeyEventKind.KeyDown)
+            {
+                _pendingDownRecord = record;
+                _pendingDownIndex = index;
+            }
         }
 
-        _dirty = true; // kaydedilmemiş yeni kayıt var
         UpdateUi();
     }
 
@@ -229,6 +331,8 @@ public partial class MainForm : Form
         _pendingDownRecord = null;
         _pendingDownIndex = -1;
         _dirty = false; // silindi, kaybedilecek kayıt yok
+        _filterActive = false;
+        lblFilter.Text = "Filtre: yok";
         UpdateUi();
     }
 
@@ -257,6 +361,8 @@ public partial class MainForm : Form
         btnClear.Enabled = _session.Records.Count > 0;
         btnSave.Enabled = _session.Records.Count > 0;
         btnStats.Enabled = _session.Records.Count > 0;
+        btnFilter.Enabled = _session.Records.Count > 0;
+        btnShowAll.Enabled = _filterActive;
 
         lblStatus.Text = recording ? "● KAYIT AÇIK" : "● KAYIT KAPALI";
         lblStatus.ForeColor = recording ? Color.ForestGreen : Color.Firebrick;
