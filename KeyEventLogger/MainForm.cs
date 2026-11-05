@@ -57,6 +57,43 @@ public partial class MainForm : Form
             FocusLogList();
     }
 
+    private void btnSave_Click(object? sender, EventArgs e)
+    {
+        if (_session.Records.Count == 0)
+        {
+            MessageBox.Show("Kaydedilecek kayıt yok.", "Bilgi",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        // Kullanıcı dosya adını ve yerini kendisi seçer (föy: "kullanıcı isterse kaydetsin").
+        using var dialog = new SaveFileDialog
+        {
+            Title = "Kayıtları kaydet",
+            Filter = "Metin dosyası (*.txt)|*.txt",
+            FileName = $"keylog_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+        };
+
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            // Dosya işlemleri hata verebilir (izin yok, disk dolu vb.); yakalayıp bildiriyoruz.
+            try
+            {
+                LogFileWriter.Save(dialog.FileName, _session.Records);
+                MessageBox.Show($"{_session.Records.Count} kayıt kaydedildi:\n{dialog.FileName}",
+                    "Kaydedildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Dosya kaydedilemedi:\n{ex.Message}", "Hata",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        if (_session.IsRecording)
+            FocusLogList();
+    }
+
     /// <summary>
     /// Kayıt sırasında odağı, buton olmayan ListBox'ta tutar. Böylece:
     /// 1) Tuşlar butonları yanlışlıkla tetiklemez (Space/Enter),
@@ -162,6 +199,7 @@ public partial class MainForm : Form
         btnStart.Enabled = !recording;
         btnStop.Enabled = recording;
         btnClear.Enabled = _session.Records.Count > 0;
+        btnSave.Enabled = _session.Records.Count > 0;
 
         lblStatus.Text = recording ? "● KAYIT AÇIK" : "● KAYIT KAPALI";
         lblStatus.ForeColor = recording ? Color.ForestGreen : Color.Firebrick;

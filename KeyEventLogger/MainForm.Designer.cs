@@ -33,6 +33,7 @@ partial class MainForm
         btnStart = new Button();
         btnStop = new Button();
         btnClear = new Button();
+        btnSave = new Button();
         lblStatus = new Label();
         lstLog = new ListBox();
         lblCount = new Label();
@@ -45,6 +46,7 @@ partial class MainForm
         pnlTop.Controls.Add(btnStart);
         pnlTop.Controls.Add(btnStop);
         pnlTop.Controls.Add(btnClear);
+        pnlTop.Controls.Add(btnSave);
         pnlTop.Controls.Add(lblStatus);
         pnlTop.Dock = DockStyle.Top;
         pnlTop.Location = new Point(0, 0);
@@ -86,6 +88,17 @@ partial class MainForm
         btnClear.Text = "Temizle";
         btnClear.UseVisualStyleBackColor = true;
         btnClear.Click += btnClear_Click;
+        //
+        // btnSave
+        //
+        btnSave.Location = new Point(359, 11);
+        btnSave.Name = "btnSave";
+        btnSave.Size = new Size(150, 36);
+        btnSave.TabIndex = 3;
+        btnSave.TabStop = false;
+        btnSave.Text = ".txt olarak kaydet";
+        btnSave.UseVisualStyleBackColor = true;
+        btnSave.Click += btnSave_Click;
         //
         // lblStatus
         //
@@ -149,6 +162,7 @@ partial class MainForm
     private Button btnStart;
     private Button btnStop;
     private Button btnClear;
+    private Button btnSave;
     private Label lblStatus;
     private ListBox lstLog;
     private Label lblCount;
