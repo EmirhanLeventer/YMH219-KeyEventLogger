@@ -75,11 +75,11 @@ public partial class MainForm : Form
         string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
         _session.Add(KeyEventKind.KeyDown, name);
 
-        // Tuşun yan etkilerini (ListBox kaydırma, ok ile odak değişimi, Space/Enter ile buton tıklama)
-        // engelle. Handled kullanıyoruz; SuppressKeyPress DEĞİL -> KeyPress yine çalışıp karakteri verir.
-        // Alt'lı tuşlara dokunmuyoruz ki Alt+F4 pencereyi kapatabilsin.
-        if (!e.Alt)
-            e.Handled = true;
+        // Kayıt açıkken TÜM tuşların yan etkisini engelle: ListBox kaydırma, ok ile odak değişimi,
+        // Space/Enter ile buton tıklama ve Alt+F4 ile kapanma. Böylece Alt+F4 de yalnızca log'a düşer.
+        // Handled kullanıyoruz; SuppressKeyPress DEĞİL -> KeyPress yine çalışıp karakteri verir.
+        // (Kapatmak için: önce Durdur, ya da başlık çubuğundaki X.)
+        e.Handled = true;
     }
 
     private void MainForm_KeyUp(object? sender, KeyEventArgs e)
@@ -90,8 +90,7 @@ public partial class MainForm : Form
         string name = NameFor(e.KeyCode, e.Control, e.Alt, e.Shift, CachedChar(e.KeyCode));
         _session.Add(KeyEventKind.KeyUp, name);
 
-        if (!e.Alt)
-            e.Handled = true;
+        e.Handled = true;
     }
 
     /// <summary>
