@@ -34,6 +34,7 @@ partial class MainForm
         btnStop = new Button();
         btnClear = new Button();
         btnSave = new Button();
+        btnStats = new Button();
         lblStatus = new Label();
         lstLog = new ListBox();
         lblCount = new Label();
@@ -47,6 +48,7 @@ partial class MainForm
         pnlTop.Controls.Add(btnStop);
         pnlTop.Controls.Add(btnClear);
         pnlTop.Controls.Add(btnSave);
+        pnlTop.Controls.Add(btnStats);
         pnlTop.Controls.Add(lblStatus);
         pnlTop.Dock = DockStyle.Top;
         pnlTop.Location = new Point(0, 0);
@@ -99,6 +101,17 @@ partial class MainForm
         btnSave.Text = ".txt olarak kaydet";
         btnSave.UseVisualStyleBackColor = true;
         btnSave.Click += btnSave_Click;
+        //
+        // btnStats
+        //
+        btnStats.Location = new Point(515, 11);
+        btnStats.Name = "btnStats";
+        btnStats.Size = new Size(110, 36);
+        btnStats.TabIndex = 4;
+        btnStats.TabStop = false;
+        btnStats.Text = "İstatistik";
+        btnStats.UseVisualStyleBackColor = true;
+        btnStats.Click += btnStats_Click;
         //
         // lblStatus
         //
@@ -164,6 +177,7 @@ partial class MainForm
     private Button btnStop;
     private Button btnClear;
     private Button btnSave;
+    private Button btnStats;
     private Label lblStatus;
     private ListBox lstLog;
     private Label lblCount;

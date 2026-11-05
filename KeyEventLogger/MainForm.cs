@@ -111,6 +111,30 @@ public partial class MainForm : Form
             FocusLogList();
     }
 
+    private void btnStats_Click(object? sender, EventArgs e)
+    {
+        var stats = new KeyStatistics(_session.Records, 5);
+
+        if (stats.TotalKeyDown == 0)
+        {
+            MessageBox.Show("Henüz istatistik için yeterli kayıt yok.", "İstatistik",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        string topList = string.Join("\n",
+            stats.TopKeys.Select((kv, i) => $"{i + 1}. {kv.Key}  —  {kv.Value} kez"));
+
+        string message =
+            $"Toplam tuş basışı (KeyDown): {stats.TotalKeyDown}\n\n" +
+            $"En sık kullanılan tuşlar:\n{topList}";
+
+        MessageBox.Show(message, "İstatistik", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+        if (_session.IsRecording)
+            FocusLogList();
+    }
+
     /// <summary>
     /// Kayıt sırasında odağı, buton olmayan ListBox'ta tutar. Böylece:
     /// 1) Tuşlar butonları yanlışlıkla tetiklemez (Space/Enter),
@@ -232,6 +256,7 @@ public partial class MainForm : Form
         btnStop.Enabled = recording;
         btnClear.Enabled = _session.Records.Count > 0;
         btnSave.Enabled = _session.Records.Count > 0;
+        btnStats.Enabled = _session.Records.Count > 0;
 
         lblStatus.Text = recording ? "● KAYIT AÇIK" : "● KAYIT KAPALI";
         lblStatus.ForeColor = recording ? Color.ForestGreen : Color.Firebrick;
