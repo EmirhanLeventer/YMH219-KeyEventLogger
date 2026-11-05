@@ -205,6 +205,11 @@ public partial class MainForm : Form
 
     // ---- Tema (görünüm) ----
 
+    // Her butonun AKTİF renkleri (pasifken soluk griye döneriz).
+    private readonly Dictionary<Button, (Color Back, Color Fore)> _btnColors = new();
+    private static readonly Color DisabledBack = Color.FromArgb(240, 241, 243);
+    private static readonly Color DisabledFore = Color.FromArgb(176, 180, 185);
+
     private void ApplyTheme()
     {
         BackColor = Color.FromArgb(248, 249, 251);
@@ -217,18 +222,29 @@ public partial class MainForm : Form
         StyleButton(btnStart, Color.FromArgb(39, 174, 96), Color.White);   // yeşil
         StyleButton(btnStop, Color.FromArgb(192, 57, 43), Color.White);    // kırmızı
         foreach (var b in new[] { btnClear, btnSave, btnStats, btnFilter, btnShowAll })
-            StyleButton(b, Color.FromArgb(233, 236, 239), Color.FromArgb(52, 58, 64)); // nötr gri
+            StyleButton(b, Color.FromArgb(222, 226, 230), Color.FromArgb(52, 58, 64)); // nötr gri
     }
 
-    private static void StyleButton(Button b, Color back, Color fore)
+    private void StyleButton(Button b, Color back, Color fore)
     {
         b.FlatStyle = FlatStyle.Flat;
         b.FlatAppearance.BorderSize = 0;
-        b.BackColor = back;
-        b.ForeColor = fore;
-        b.Cursor = Cursors.Hand;
         b.FlatAppearance.MouseOverBackColor = ControlPaint.Light(back, 0.15f);
         b.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(back, 0.05f);
+
+        _btnColors[b] = (back, fore);
+        // Enabled değişince renkleri otomatik güncelle (pasif = soluk gri).
+        b.EnabledChanged += (s, e) => ApplyButtonState(b);
+        ApplyButtonState(b);
+    }
+
+    private void ApplyButtonState(Button b)
+    {
+        var (back, fore) = _btnColors[b];
+        bool on = b.Enabled;
+        b.BackColor = on ? back : DisabledBack;
+        b.ForeColor = on ? fore : DisabledFore;
+        b.Cursor = on ? Cursors.Hand : Cursors.Default;
     }
 
     /// <summary>
